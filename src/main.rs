@@ -51,20 +51,44 @@ fn get_lcs(x: Vec<String>, y: Vec<String>)-> Vec<String>{
 }
 
 
-fn get_vectors(x_file: File, y_file: File) -> (Vec<String>, Vec<String>) {
+fn only_spaces(s: String) -> bool{
+    for c in s.chars(){
+        if !c.is_whitespace(){
+            return false;
+        }
+    }
+    true
+}
+
+
+fn get_vectors(x_file: File, y_file: File, ignore_register: bool, ignore_space: bool) -> (Vec<String>, Vec<String>) {
     let mut x: Vec<String> = Vec::new();
     let mut y: Vec<String> = Vec::new();
 
     let x_reader = BufReader::new(x_file);
     let lines = x_reader.lines();
     for line in lines{
-        x.push(line.unwrap().trim().to_string());
+        let mut str = line.unwrap().trim().to_string();
+        if ignore_register{
+            str = str.to_lowercase();
+        }
+        if ignore_space && only_spaces(str.clone()){
+            continue;
+        }
+        x.push(str);
     }
 
     let y_reader = BufReader::new(y_file);
     let lines = y_reader.lines();
     for line in lines{
-        y.push(line.unwrap().trim().to_string());
+        let mut str = line.unwrap().trim().to_string();
+        if ignore_register{
+            str = str.to_lowercase();
+        }
+        if ignore_space && only_spaces(str.clone()){
+            continue;
+        }
+        y.push(str);
     }
 
     (x, y)
@@ -117,8 +141,8 @@ fn print_diff(deleted: Vec<(i32, String)>, added: Vec<(i32, String)>){
 }
 
 
-fn compare_files(x_file: File, y_file: File){
-    let vectors = get_vectors(x_file, y_file);
+fn compare_files(x_file: File, y_file: File, ignore_register: bool, ignore_space: bool){
+    let vectors = get_vectors(x_file, y_file, ignore_register, ignore_space);
     let x = vectors.0.clone();
     let y = vectors.1.clone();
 
@@ -182,6 +206,20 @@ fn main() {
     if command[0] != "diff"{
         println!("Команда не распознана, введите diff file_1 file_2");
     }else {
-        compare_files(File::open(command[1].clone()).unwrap(), File::open(command[2].clone()).unwrap());
+        let mut ignore_register = false;
+        let mut ignore_space = false;
+        if command.len() == 5 && (command[3] == "-b" && command[4] == "-i" ||
+            command[4] == "-b" && command[3] == "-i") {
+            ignore_register = true;
+            ignore_space = true;
+        } else if command.len() == 4 &&  command[3] == "-b" {
+            ignore_space = true;
+        } else if command.len() == 4 && command[3] == "-i" {
+            ignore_register = true;
+        } else if command.len() != 3{
+            println!("Флаг не распознан, введите -b или -i");
+        }
+        compare_files(File::open(command[1].clone()).unwrap(), File::open(command[2].clone()).unwrap(),
+        ignore_register, ignore_space);
     }
 }
